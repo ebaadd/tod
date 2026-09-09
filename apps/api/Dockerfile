@@ -18,6 +18,7 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 RUN npm ci --omit=dev --ignore-scripts=false
+RUN npm rebuild esbuild
 
 COPY apps/api ./apps/api
 RUN npm run build -w @tod/api
