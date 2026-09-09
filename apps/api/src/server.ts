@@ -1,5 +1,6 @@
 import { ingestSubmission, registerGroupRoutes } from "./groups.js";
 import Fastify, {
+  type FastifyError,
   type FastifyRequest,
   type FastifyReply
 } from "fastify";
@@ -15,8 +16,8 @@ import {
   UpdateCommand,
   GetCommand
 } from "@aws-sdk/lib-dynamodb";
-import { DescribeTableCommand } from "@aws-sdk/client-dynamodb";
 import { env, pg, db, client, table } from "./storage.js";
+import { lookupOwner, publishOwner } from "./directory.js";
 
 const app = Fastify({
   logger: true,
@@ -56,7 +57,7 @@ class HttpError extends Error {
   }
 }
 
-app.setErrorHandler((error, _request, reply) => {
+app.setErrorHandler((error: FastifyError, _request, reply) => {
   if (error instanceof z.ZodError) {
     return reply.code(400).send({
       error: error.issues[0]?.message ?? "Invalid request."
@@ -77,6 +78,11 @@ app.setErrorHandler((error, _request, reply) => {
 });
 
 app.addHook("onRequest", async (request, reply) => {
+  // The Lambda Function URL is publicly reachable. CloudFront attaches this
+  // header, so anything arriving without it bypassed the CDN and its throttles.
+  if (env.EDGE_SECRET && request.headers["x-tod-edge"] !== env.EDGE_SECRET) {
+    throw new HttpError(403, "Request did not come through the CDN.");
+  }
   reply.header("Cache-Control", "no-store");
   reply.header("X-Content-Type-Options", "nosniff");
   if (["POST", "DELETE", "PUT", "PATCH"].includes(request.method)) {
@@ -107,12 +113,9 @@ async function owner(request: FastifyRequest) {
   const name = username.parse(
     (request.params as { username: string }).username
   );
-  const result = await pg.query(
-    "SELECT id, username FROM accounts WHERE username = $1",
-    [name]
-  );
-  if (!result.rows[0]) throw new HttpError(404, "This link does not exist.");
-  return result.rows[0] as { id: string; username: string };
+  const found = await lookupOwner(name);
+  if (!found) throw new HttpError(404, "This link does not exist.");
+  return found;
 }
 
 async function issueSession(reply: FastifyReply, id: string) {
@@ -175,9 +178,20 @@ const hpk = (visitorHash: string, ownerId: string) =>
   `VISITOR#${visitorHash}#OWNER#${ownerId}`;
 
 app.get("/health/live", async () => ({ ok: true }));
-app.get("/health/ready", async () => {
-  await pg.query("SELECT 1");
-  await client.send(new DescribeTableCommand({ TableName: table }));
+// Checks only DynamoDB by default. A health check that touched PostgreSQL on
+// every call would hold a paused serverless cluster awake around the clock and
+// bill for it, so the SQL probe is opt-in via ?deep=1.
+app.get("/health/ready", async request => {
+  await db.send(new GetCommand({
+    TableName: table,
+    Key: { pk: "HEALTH", sk: "HEALTH" }
+  }));
+
+  if ((request.query as { deep?: string }).deep === "1") {
+    await pg.query("SELECT 1");
+    return { ok: true, deep: true };
+  }
+
   return { ok: true };
 });
 
@@ -201,11 +215,20 @@ app.post("/auth/signup", {
      VALUES ($1, $2, $3, $4, $5)`,
     [id, input.name, input.username, input.email, passwordHash]
   );
+  // Publish the public link into DynamoDB so anonymous visitors resolve the
+  // username without touching PostgreSQL. lookupOwner repairs this if it fails.
+  await publishOwner({ id, username: input.username }).catch(() => {});
+
   await issueSession(reply, id);
   return reply.code(201).send({ ok: true });
 });
 
-const dummyHash = await argon2.hash(randomToken());
+// Verified against a fixed hash when the email is unknown, so a failed login
+// costs the same time whether or not the account exists. Generated once with
+// the same parameters argon2.hash uses, so the timings match. Not a secret.
+const dummyHash =
+  "$argon2id$v=19$m=65536,t=3,p=4$gyznu7qYCLOzG2ty/OH+zA$" +
+  "ycxww+6Uy3gf7k9TWAaQ6h3I/Fclc314fudTUR5RiFM";
 
 app.post("/auth/login", {
   config: { rateLimit: { max: 10, timeWindow: "1 minute" } }
@@ -316,7 +339,13 @@ app.post("/public/:username/submissions", {
     }
   }
 
-  await ingestSubmission(item);
+  // In AWS the DynamoDB stream drives grouping, so the visitor's request
+  // returns as soon as the submission is durable and a traffic spike never
+  // queues behind PostgreSQL. Local development has no stream consumer, so
+  // the ingest happens inline there to keep the dev loop identical.
+  if (process.env.RUN_LOCAL === "true") {
+    await ingestSubmission(item);
+  }
 
   return reply.code(201).send({ submission: publicItem(item) });
 });
@@ -411,17 +440,24 @@ app.get("/inbox", async (request, reply) => {
   };
 });
 
-app.addHook("onClose", async () => {
-  await pg.end();
-  client.destroy();
-});
-
-for (const signal of ["SIGTERM", "SIGINT"] as const) {
-  process.once(signal, () => {
-    app.close().catch(() => { process.exitCode = 1; });
-  });
-}
-
 await registerGroupRoutes(app, auth);
 
-await app.listen({ port: env.PORT, host: "0.0.0.0" });
+export { app };
+
+// On Lambda the container is frozen between invocations rather than shut down,
+// so tearing the pool down on a signal would close connections that are still
+// reusable. Only the local server owns its lifecycle.
+if (process.env.RUN_LOCAL === "true") {
+  app.addHook("onClose", async () => {
+    await pg.end();
+    client.destroy();
+  });
+
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => {
+      app.close().catch(() => { process.exitCode = 1; });
+    });
+  }
+
+  await app.listen({ port: env.PORT, host: "0.0.0.0" });
+}

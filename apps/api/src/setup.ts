@@ -2,40 +2,46 @@ import {
   CreateTableCommand,
   DescribeTableCommand,
   DescribeTimeToLiveCommand,
+  UpdateTableCommand,
   UpdateTimeToLiveCommand,
   waitUntilTableExists
 } from "@aws-sdk/client-dynamodb";
 import { pg, client, table } from "./storage.js";
+import { createSchema } from "./schema.js";
+
+// Grouping is driven by this stream in AWS. NEW_IMAGE carries the whole
+// submission, so the handler needs no follow-up read.
+const STREAM = {
+  StreamEnabled: true,
+  StreamViewType: "NEW_IMAGE" as const
+};
 
 async function main() {
-  await pg.query(`
-    CREATE TABLE IF NOT EXISTS accounts (
-      id uuid PRIMARY KEY,
-      name varchar(80) NOT NULL,
-      username varchar(30) NOT NULL UNIQUE,
-      email varchar(254) NOT NULL UNIQUE,
-      password_hash text NOT NULL,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
+  await createSchema();
 
-    CREATE TABLE IF NOT EXISTS sessions (
-      token_hash char(64) PRIMARY KEY,
-      user_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      expires_at timestamptz NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS sessions_expiry_idx
-      ON sessions(expires_at);
-  `);
-
+  let exists = true;
   try {
-    await client.send(new DescribeTableCommand({ TableName: table }));
+    const described = await client.send(
+      new DescribeTableCommand({ TableName: table })
+    );
+
+    // Enable the stream on a table that predates it.
+    if (!described.Table?.StreamSpecification?.StreamEnabled) {
+      await client.send(new UpdateTableCommand({
+        TableName: table,
+        StreamSpecification: STREAM
+      })).catch(() => {
+        console.warn("Could not enable the stream. DynamoDB Local ignores it.");
+      });
+    }
   } catch (error) {
+    exists = false;
     if ((error as Error).name !== "ResourceNotFoundException") throw error;
 
     await client.send(new CreateTableCommand({
       TableName: table,
       BillingMode: "PAY_PER_REQUEST",
+      StreamSpecification: STREAM,
       AttributeDefinitions: [
         { AttributeName: "pk", AttributeType: "S" },
         { AttributeName: "sk", AttributeType: "S" },
@@ -76,7 +82,11 @@ async function main() {
     }));
   }
 
-  console.log("Database setup complete.");
+  console.log(
+    exists
+      ? "Database setup complete. Existing table reused."
+      : "Database setup complete. Table created."
+  );
 }
 
 main()
