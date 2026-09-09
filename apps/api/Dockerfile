@@ -6,9 +6,8 @@
 # Amazon's RDS certificate bundle, so the Lambdas can verify Aurora's TLS
 # certificate rather than trusting it blindly.
 FROM public.ecr.aws/lambda/nodejs:22 AS certs
-RUN dnf install -y curl && \
-    curl -fsSL -o /rds-ca.pem \
-      https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+RUN curl -fsSL -o /rds-ca.pem \
+    https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
 FROM public.ecr.aws/lambda/nodejs:22 AS build
 WORKDIR /build
