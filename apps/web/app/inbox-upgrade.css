@@ -1,0 +1,280 @@
+main:has(.modern-inbox) {
+  max-width: 1020px;
+}
+
+.inbox-hero {
+  margin-bottom: 28px;
+}
+
+.inbox-hero h1 {
+  margin: 12px 0;
+}
+
+.share-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid #fff;
+  border-radius: 22px;
+  background: #ffffffda;
+}
+
+.share-strip > div {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.share-strip > button {
+  flex-shrink: 0;
+}
+
+.inbox-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 0 16px;
+}
+
+.inbox-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: #eee7f4;
+  border-radius: 16px;
+}
+
+.inbox-tabs button {
+  padding: 10px 23px;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  color: #756480;
+  font-weight: 700;
+}
+
+.inbox-tabs button.selected {
+  background: white;
+  color: #7131a1;
+  box-shadow: 0 3px 10px #39204c0a;
+}
+
+.inbox-table {
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid #e9e1f0;
+  background: #ffffffee;
+  box-shadow: 0 16px 45px #45205f08;
+}
+
+.inbox-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 145px 155px;
+  gap: 20px;
+  align-items: center;
+}
+
+.inbox-head {
+  background: #fbf8fd;
+  color: #8a7a96;
+  padding: 17px 24px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  border-bottom: 1px solid #eee7f4;
+}
+
+.inbox-entry + .inbox-entry {
+  border-top: 1px solid #eee7f4;
+}
+
+.inbox-entry > .inbox-grid {
+  padding: 23px 24px;
+}
+
+.question-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.type-dot {
+  flex: 0 0 39px;
+  height: 39px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.type-dot.truth {
+  background: #f1e6ff;
+  color: #8a40c1;
+}
+
+.type-dot.dare {
+  background: #ffe8ee;
+  color: #dd5582;
+}
+
+.question-copy {
+  min-width: 0;
+}
+
+.question-copy p {
+  margin: 0 0 7px;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.question-copy .muted {
+  font-size: 12px;
+}
+
+.count-pill {
+  border: 1px solid #ebe1f3;
+  background: #fbf7fe;
+  border-radius: 12px;
+  padding: 9px 10px;
+  font-size: 12px;
+  color: #78558f;
+}
+
+.sticker-button {
+  border: 0;
+  border-radius: 12px;
+  background: #f0e4fc;
+  color: #7835a5;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sticker-button:hover {
+  background: #e8d4fa;
+}
+
+.variants {
+  border-top: 1px dashed #e8ddef;
+  background: #fcf9fe;
+  padding: 20px 24px 20px 76px;
+}
+
+.variant {
+  padding: 13px 0;
+}
+
+.variant + .variant {
+  border-top: 1px solid #eee7f4;
+}
+
+.variant p {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.variant .link {
+  font-size: 12px;
+}
+
+.inbox-empty {
+  padding: 36px 24px;
+  text-align: center;
+}
+
+.studio {
+  max-width: 620px;
+  margin: auto;
+  background: white;
+  border: 1px solid #e8ddef;
+  border-radius: 24px;
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.studio h2 {
+  margin: 8px 0 0;
+}
+
+.sticker-checker {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  padding: 12px;
+  overflow: hidden;
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #eee 25%, transparent 25%),
+    linear-gradient(-45deg, #eee 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eee 75%),
+    linear-gradient(-45deg, transparent 75%, #eee 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+}
+
+.sticker-preview {
+  display: block;
+  width: 100%;
+  max-height: 560px;
+  object-fit: contain;
+}
+
+.studio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 680px) {
+  .inbox-head {
+    display: none;
+  }
+
+  .inbox-entry > .inbox-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    padding: 20px;
+    gap: 16px 10px;
+  }
+
+  .question-cell {
+    grid-column: 1 / -1;
+  }
+
+  .count-pill,
+  .sticker-button {
+    width: 100%;
+  }
+
+  .share-strip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .share-strip .primary {
+    width: 100%;
+  }
+
+  .inbox-tabs button {
+    padding: 10px 16px;
+  }
+
+  .variants {
+    padding: 20px;
+  }
+
+  .studio {
+    padding: 18px;
+  }
+}

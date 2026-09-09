@@ -1,0 +1,10 @@
+{
+  "name": "TOD",
+  "fullName": "Truth or Death",
+  "tagline": "Ask anonymously. Keep the dare coming.",
+  "colors": {
+    "primary": "#9333EA",
+    "secondary": "#EC4899",
+    "accent": "#F97316"
+  }
+}

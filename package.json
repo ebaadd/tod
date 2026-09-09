@@ -1,0 +1,17 @@
+{
+  "name": "tod",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web,grouping \"npm run dev -w @tod/api\" \"npm run dev -w @tod/web\" \"npm run worker -w @tod/api\"",
+    "setup": "npm run setup -w @tod/api",
+    "typecheck": "npm run typecheck -w @tod/api",
+    "groups:setup": "npm run groups:setup -w @tod/api",
+    "groups:backfill": "npm run groups:backfill -w @tod/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
