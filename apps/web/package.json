@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "build:prod": "NEXT_PUBLIC_API_URL=/api next build"
   },
   "dependencies": {
     "next": "^16.0.0",

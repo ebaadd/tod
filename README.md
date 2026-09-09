@@ -19,6 +19,8 @@ npm run setup
 npm run dev
 ```
 
+To deploy to AWS, see [docs/DEPLOY.md](docs/DEPLOY.md).
+
 If setup fails because PostgreSQL is still starting, wait a few seconds
 and run `npm run setup` again.
 
@@ -44,19 +46,27 @@ API health:
 - Input limits, origin checking, basic per-process rate limits.
 - 90-day submission expiry field and DynamoDB TTL configuration.
 - Health endpoints and minimal safe error logging.
+- Semantic grouping of same-meaning submissions, with the original wordings
+  kept underneath.
+- Browser-generated transparent PNG stickers.
+- Terraform for a pay-per-use AWS deployment, with cost guardrails.
 
 ## Not included yet
 
-- Semantic grouping and embedding provider.
-- Background grouping worker/queue.
-- Transparent PNG sticker generation.
+- Password recovery and email verification. A forgotten password currently
+  means an unrecoverable account.
+- Account and data deletion. Required before real users, under GDPR and the
+  DPDP Act.
+- Content moderation and a reporting path. An anonymous message box will
+  receive abuse; decide how you handle it before launch, not after.
 - Bulk history clearing.
-- Owner deletion, account deletion and password recovery.
-- Session cleanup job and full retention reconciliation.
 - Automated integration/security tests.
-- Production containers, AWS infrastructure, ads and dashboards.
+- Reliable grouping of romanized Hinglish — see docs/GROUPING-UPGRADE.md.
+- Partition sharding for a single very high-volume recipient.
+- Ads and dashboards.
 
-This is a starter, not the completed or production-ready product.
+This is a starter. It deploys and it is cheap, but the list above stands
+between deployed and responsible.
 
 ## Local storage behavior
 
@@ -87,23 +97,30 @@ Owner sessions expire after 30 days and are renewed during activity.
 No email verification or password recovery is implemented.
 Do not imply that an account's email has been verified.
 
-## AWS deployment considerations
+## AWS deployment
 
-- Use same-site frontend and API URLs, preferably a same-domain proxy.
-- Set COOKIE_SECURE=true and use HTTPS.
-- Set WEB_ORIGIN to the exact frontend origin.
-- Remove DYNAMODB_ENDPOINT to use AWS DynamoDB.
-- Use IAM roles, not embedded AWS credentials.
-- Configure PostgreSQL TLS appropriate to your RDS deployment.
-- Use infrastructure-as-code for the production DynamoDB table.
-- Current owner keys are MVP keys; high-volume recipients require a
-  partition-sharding strategy.
-- Add distributed rate limiting or WAF before running multiple API replicas.
-- Do not enable unrestricted proxy trust.
-- Set CloudWatch log retention and avoid logging text/cookies.
+`./deploy.sh` provisions and deploys everything; `infra/` holds the Terraform.
+See [docs/DEPLOY.md](docs/DEPLOY.md) for the account setup and the reasoning.
+
+Handled by that configuration:
+
+- One CloudFront distribution serves the site and `/api/*`, so the session
+  cookie is same-site and there is no CORS.
+- `COOKIE_SECURE=true`, HTTPS only, `WEB_ORIGIN` pinned to the distribution.
+- IAM roles rather than embedded credentials, scoped to the table.
+- TLS to Aurora verified against Amazon's RDS certificate bundle.
+- CloudWatch log retention set to 14 days.
+- A budget, alarms, and a Lambda concurrency ceiling.
+- No NAT gateway, which would otherwise cost more than the database.
+
+Still on you:
+
+- Rate limiting is per-process, so it is weak on Lambda. Add WAF or a
+  DynamoDB-backed limiter before you have real traffic.
+- Owner partition keys are MVP keys; one very high-volume recipient needs
+  sharding.
 - Infrastructure request volume is not exact successful-submission volume.
-- Add production migrations, tests, deletion flows and cleanup jobs.
-- Review dependency security advisories; commit package-lock.json after install.
+- Review dependency advisories; commit package-lock.json after install.
 
 ## Smoke test
 

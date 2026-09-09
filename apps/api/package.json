@@ -6,13 +6,21 @@
     "dev": "tsx watch --env-file=.env src/server.ts",
     "setup": "tsx --env-file=.env src/setup.ts",
     "typecheck": "tsc --noEmit",
+    "build": "npm run build:api && npm run build:grouping && npm run build:migrate",
+    "build:api": "esbuild src/lambda.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/lambda.mjs",
+    "build:grouping": "esbuild src/grouping-lambda.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/grouping.mjs",
     "groups:setup": "tsx --env-file=.env src/groups-setup.ts",
     "groups:backfill": "tsx --env-file=.env src/groups-backfill.ts",
-    "worker": "tsx --env-file=.env src/groups-worker.ts"
+    "directory:backfill": "tsx --env-file=.env src/directory-backfill.ts",
+    "worker": "tsx --env-file=.env src/groups-worker.ts",
+    "build:migrate": "esbuild src/migrate-lambda.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/migrate.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.900.0",
     "@aws-sdk/client-dynamodb": "^3.900.0",
     "@aws-sdk/lib-dynamodb": "^3.900.0",
+    "@aws-sdk/util-dynamodb": "^3.900.0",
+    "@fastify/aws-lambda": "^5.0.0",
     "@fastify/cookie": "^11.0.0",
     "@fastify/cors": "^11.0.0",
     "@fastify/rate-limit": "^10.0.0",
@@ -25,6 +33,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/pg": "^8.11.0",
+    "esbuild": "^0.24.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
